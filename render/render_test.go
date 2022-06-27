@@ -6,43 +6,76 @@ import (
 	"testing"
 )
 
+var pageData = []struct {
+	name          string
+	renderer      string
+	template      string
+	errorExpected bool
+	errorMessage  string
+}{
+	{
+		"go_page",
+		"go",
+		"home",
+		false,
+		"Error renderizando template de go",
+	},
+	{
+		"go_page_no_template",
+		"go",
+		"no-file",
+		true,
+		"Sin error al renderizar template go cuando se espera uno",
+	},
+	{
+		"jet_page",
+		"jet",
+		"home",
+		false,
+		"Error renderizando template de jet",
+	},
+	{
+		"jet_page_no_template",
+		"jet",
+		"no-file",
+		true,
+		"Sin error al renderizar template jet cuando se espera uno",
+	},
+
+	{
+		"invalid_render",
+		"foo",
+		"home",
+		true,
+		"Sin error renderizando con un template engine inexistente",
+	},
+}
+
 func TestRender_Page(t *testing.T) {
-	r, err := http.NewRequest("GET", "/some-url", nil)
 
-	if err != nil {
-		t.Error(err)
-	}
+	for _, e := range pageData {
+		r, err := http.NewRequest("GET", "/some-url", nil)
 
-	w := httptest.NewRecorder()
+		if err != nil {
+			t.Error(err)
+		}
 
-	testRenderer.Renderer = "go"
-	testRenderer.RoothPath = "./testdata"
+		w := httptest.NewRecorder()
 
-	err = testRenderer.Page(w, r, "home", nil, nil)
-	if err != nil {
-		t.Error("Error renderizando la pagina", err)
-	}
+		testRenderer.Renderer = e.renderer
+		testRenderer.RoothPath = "./testdata"
 
-	err = testRenderer.Page(w, r, "no-file", nil, nil)
-	if err == nil {
-		t.Error("Error renderizando pagina no existente", err)
-	}
+		err = testRenderer.Page(w, r, e.template, nil, nil)
 
-	testRenderer.Renderer = "jet"
-	err = testRenderer.Page(w, r, "home", nil, nil)
-	if err != nil {
-		t.Error("Error renderizando la pagina", err)
-	}
-
-	err = testRenderer.Page(w, r, "no-file", nil, nil)
-	if err == nil {
-		t.Error("Error renderizando pagina no existente", err)
-	}
-
-	testRenderer.Renderer = ""
-	err = testRenderer.Page(w, r, "home", nil, nil)
-	if err == nil {
-		t.Error("No se retorno error sin especificar renderizador", err)
+		if e.errorExpected {
+			if err == nil {
+				t.Errorf("%s : %s", e.name, e.errorMessage)
+			}
+		} else {
+			if err != nil {
+				t.Errorf("%s : %s: %s", e.name, e.errorMessage, err.Error())
+			}
+		}
 	}
 
 }
